@@ -1,0 +1,172 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  DOCTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum TriageLevel {
+  MILD
+  MODERATE
+  EMERGENCY
+}
+
+enum AppointmentStatus {
+  PENDING
+  APPROVED
+  RESCHEDULED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum EmergencyStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum RecordEntryType {
+  CLINICAL_NOTE
+  TRIAGE_SUMMARY
+  APPOINTMENT_NOTE
+  EMERGENCY_NOTE
+}
+
+model User {
+  id                 String               @id @default(cuid())
+  name               String
+  email              String               @unique
+  passwordHash       String
+  role               Role
+  status             UserStatus           @default(ACTIVE)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  healthProfile      HealthProfile?
+  assessments        SymptomAssessment[]  @relation("StudentAssessments")
+  appointments       Appointment[]        @relation("StudentAppointments")
+  assignedAppointments Appointment[]      @relation("AssignedDoctorAppointments")
+  emergencyAlerts    EmergencyAlert[]     @relation("StudentEmergencyAlerts")
+  acknowledgedAlerts EmergencyAlert[]     @relation("AcknowledgedEmergencyAlerts")
+  medicalRecords     MedicalRecordEntry[] @relation("StudentMedicalRecords")
+  authoredRecords    MedicalRecordEntry[] @relation("DoctorMedicalRecords")
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+}
+
+model HealthProfile {
+  id                         String   @id @default(cuid())
+  userId                     String   @unique
+  matricNumber               String?
+  ageRange                   String?
+  sex                        Sex?
+  allergiesEncrypted         String?
+  chronicConditionsEncrypted String?
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SymptomAssessment {
+  id                 String       @id @default(cuid())
+  studentId          String
+  submittedSymptoms  String[]
+  normalizedSymptoms String[]
+  contextNotes       String?
+  triageLevel        TriageLevel
+  confidence         Float
+  condition          String
+  matchedSignals     String[]
+  explanation        String
+  recommendation     String
+  engineVersion      String
+  emergencyFlag      Boolean      @default(false)
+  createdAt          DateTime     @default(now())
+  student            User         @relation("StudentAssessments", fields: [studentId], references: [id], onDelete: Cascade)
+  appointments       Appointment[]
+  emergencyAlerts    EmergencyAlert[]
+}
+
+model Appointment {
+  id                 String            @id @default(cuid())
+  studentId          String
+  assignedDoctorId   String?
+  preferredDateTime  DateTime
+  reason             String
+  status             AppointmentStatus @default(PENDING)
+  clinicianResponse  String?
+  triageReferenceId  String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  student            User              @relation("StudentAppointments", fields: [studentId], references: [id], onDelete: Cascade)
+  assignedDoctor     User?             @relation("AssignedDoctorAppointments", fields: [assignedDoctorId], references: [id])
+  triageReference    SymptomAssessment? @relation(fields: [triageReferenceId], references: [id])
+}
+
+model EmergencyAlert {
+  id                  String            @id @default(cuid())
+  studentId           String
+  linkedAssessmentId  String?
+  severity            TriageLevel
+  status              EmergencyStatus   @default(ACTIVE)
+  message             String
+  acknowledgedById    String?
+  createdAt           DateTime          @default(now())
+  resolvedAt          DateTime?
+  student             User              @relation("StudentEmergencyAlerts", fields: [studentId], references: [id], onDelete: Cascade)
+  linkedAssessment    SymptomAssessment? @relation(fields: [linkedAssessmentId], references: [id])
+  acknowledgedBy      User?             @relation("AcknowledgedEmergencyAlerts", fields: [acknowledgedById], references: [id])
+}
+
+model MedicalRecordEntry {
+  id            String          @id @default(cuid())
+  studentId     String
+  doctorId      String
+  type          RecordEntryType
+  title         String
+  encryptedNote String
+  createdAt     DateTime        @default(now())
+  student       User            @relation("StudentMedicalRecords", fields: [studentId], references: [id], onDelete: Cascade)
+  doctor        User            @relation("DoctorMedicalRecords", fields: [doctorId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  timestamp  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id])
+}
+
+model RefreshToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
