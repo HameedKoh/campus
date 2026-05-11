@@ -5,5 +5,15 @@ export const userController = {
   async me(req: Request, res: Response) {
     const payload = await userService.getCurrentUser(req.user!.sub);
     res.status(200).json(payload);
+  },
+
+  async updateProfile(req: Request, res: Response) {
+    const payload = await userService.updateProfile(req.user!.sub, req.body);
+    res.status(200).json(payload);
+  },
+
+  async changePassword(req: Request, res: Response) {
+    const payload = await userService.changePassword(req.user!.sub, req.body);
+    res.status(200).json(payload);
   }
 };

@@ -18,12 +18,14 @@ const staffLinks = [
 
 export function AppShell() {
   const { session, logout } = useAuth();
-  const links =
+  const baseLinks =
     session?.user.role === "STUDENT"
       ? studentLinks
       : session?.user.role === "ADMIN"
         ? [...staffLinks, { to: "/staff", label: "Staff Admin" }]
         : staffLinks;
+
+  const links = [...baseLinks, { to: "/profile", label: "Profile" }];
 
   return (
     <div className="dashboard-layout">

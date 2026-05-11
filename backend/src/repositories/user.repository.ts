@@ -47,9 +47,7 @@ export const userRepository = {
         passwordHash: input.passwordHash,
         role: "STUDENT",
         healthProfile: input.healthProfile
-          ? {
-              create: input.healthProfile
-            }
+          ? { create: input.healthProfile }
           : undefined
       },
       include: profileInclude
@@ -68,6 +66,41 @@ export const userRepository = {
     });
   },
 
+  updateProfile(
+    id: string,
+    data: {
+      name?: string;
+      passwordHash?: string;
+      healthProfile?: {
+        matricNumber?: string;
+        ageRange?: string;
+        sex?: "FEMALE" | "MALE" | "OTHER" | "PREFER_NOT_TO_SAY";
+        allergiesEncrypted?: string | null;
+        chronicConditionsEncrypted?: string | null;
+      };
+    }
+  ) {
+    const { healthProfile, ...userFields } = data;
+
+    return prisma.user.update({
+      where: { id },
+      data: {
+        ...userFields,
+        ...(healthProfile
+          ? {
+              healthProfile: {
+                upsert: {
+                  create: healthProfile,
+                  update: healthProfile
+                }
+              }
+            }
+          : {})
+      },
+      include: profileInclude
+    });
+  },
+
   updateStatus(id: string, status: "ACTIVE" | "INACTIVE") {
     return prisma.user.update({
       where: { id },
@@ -78,17 +111,11 @@ export const userRepository = {
 
   findDoctorById(id: string) {
     return prisma.user.findFirst({
-      where: {
-        id,
-        role: "DOCTOR",
-        status: "ACTIVE"
-      }
+      where: { id, role: "DOCTOR", status: "ACTIVE" }
     });
   },
 
   countByRole(role: Role) {
-    return prisma.user.count({
-      where: { role }
-    });
+    return prisma.user.count({ where: { role } });
   }
 };
