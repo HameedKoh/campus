@@ -1,7 +1,12 @@
 import { z } from "zod";
 
 export const createAppointmentSchema = z.object({
-  preferredDateTime: z.string().datetime(),
+  preferredDateTime: z
+    .string()
+    .min(1)
+    .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+      message: "Preferred date and time must be a valid date"
+    }),
   reason: z.string().min(5).max(300),
   triageReferenceId: z.string().optional()
 });

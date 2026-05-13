@@ -52,8 +52,15 @@ export function AppointmentsPage() {
     setError("");
 
     try {
+      const parsedDate = new Date(studentForm.preferredDateTime);
+      if (Number.isNaN(parsedDate.getTime())) {
+        setError("Please choose a valid appointment date and time.");
+        return;
+      }
+
+      const preferredDateTime = parsedDate.toISOString();
       await api.createAppointment({
-        preferredDateTime: studentForm.preferredDateTime,
+        preferredDateTime,
         reason: studentForm.reason,
         triageReferenceId: studentForm.triageReferenceId || undefined
       });
